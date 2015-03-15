@@ -1,6 +1,6 @@
 #!/usr/bin/env python 
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 from matplotlib.pyplot import *
 from matplotlib.transforms import offset_copy
 import numpy as np
