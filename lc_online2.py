@@ -11,7 +11,10 @@ import matplotlib.gridspec as gridspec
 from matplotlib.widgets import CheckButtons
 from matplotlib.ticker import MaxNLocator
 
-global iline, icts
+global iline, icts, ishow1, ishow3
+
+ishow1=0
+ishow3=0
 
 def padxlim2(ax1,xdata):
     """
@@ -113,7 +116,11 @@ def fwhm_fit(aplist,apvec):
     ypos = y1 + ys*(y2-y1)
     text(xpos,ypos,totstring, horizontalalignment='center', verticalalignment='center')
 
-    show()
+    if ishow3 == 0:
+        show()
+        ishow3 = 1
+    else:
+        draw()
     tight_layout()
 
     #psffile='psf_fit.pdf'
@@ -308,7 +315,11 @@ def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring):
     check.on_clicked(stylefunc)
 
     #tight_layout()
-    show()
+    if ishow1 == 0:
+        show()
+        ishow1 = 1
+    else:
+        draw()
 
     #filebase = 'lc.pdf'
     #savefig(filebase,transparent=True,bbox_inches='tight')
