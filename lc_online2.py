@@ -114,7 +114,7 @@ def fwhm_fit(aplist,apvec,is_first_iter):
     text(xpos,ypos,totstring, horizontalalignment='center', verticalalignment='center')
 
     if is_first_iter:
-        show()
+        show(block=False)
     else:
         draw()
     tight_layout()
@@ -312,7 +312,7 @@ def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring,is_first_iter):
 
     #tight_layout()
     if is_first_iter:
-        show()
+        show(block=False)
     else:
         draw()
 
