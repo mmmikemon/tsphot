@@ -11,10 +11,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.widgets import CheckButtons
 from matplotlib.ticker import MaxNLocator
 
-global iline, icts, ishow1, ishow3
-
-ishow1=0
-ishow3=0
+global iline, icts
 
 def padxlim2(ax1,xdata):
     """
@@ -81,7 +78,7 @@ def fwhm_fit2(aplist,targs):
     #print 'PSF fit stored in',psffile,'\n'
     return fwhm_vec
 
-def fwhm_fit(aplist,apvec):
+def fwhm_fit(aplist,apvec,is_first_iter):
     f = apvec
     ndim = len(f)
     i = np.arange(ndim)
@@ -116,9 +113,8 @@ def fwhm_fit(aplist,apvec):
     ypos = y1 + ys*(y2-y1)
     text(xpos,ypos,totstring, horizontalalignment='center', verticalalignment='center')
 
-    if ishow3 == 0:
+    if is_first_iter:
         show()
-        ishow3 = 1
     else:
         draw()
     tight_layout()
@@ -193,7 +189,7 @@ def applot(apfile, aplist,sigvec,apmin,cstring):
     #print 'Aperture optimization stored in',apfile
     
 # Make a plot of the optimal light curve file
-def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring):
+def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring,is_first_iter):
 #def lcplot(time,target,comp,sky,fwhm_vec,cstring):
     global iline, icts
     ratio = target/comp
@@ -315,9 +311,8 @@ def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring):
     check.on_clicked(stylefunc)
 
     #tight_layout()
-    if ishow1 == 0:
+    if is_first_iter:
         show()
-        ishow1 = 1
     else:
         draw()
 
@@ -337,7 +332,7 @@ def scatter(lcvec):
     return ysig
 
 #if __name__ == '__main__':
-def main(args):
+def main(args,is_first_iter):
 
     #lcfile = 'lightcurve.app'
     #lcfile = 'lightcurve_test.app'
@@ -475,7 +470,7 @@ def main(args):
         fwhm_vec = fwhm_fit2(aplist,targs)   # FWHM of target star
 
     # Make online plot of lightcurves, sky, and the FT
-    lcplot(args.flc_pdf, time,target,compstar,sky0,fwhm_vec,cstring)
+    lcplot(args.flc_pdf, time,target,compstar,sky0,fwhm_vec,cstring,is_first_iter)
 
     return None
 
