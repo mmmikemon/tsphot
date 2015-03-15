@@ -9,7 +9,7 @@ import time
 import argparse
 import read_spe
 import spe_process
-import lc_online2
+import lc_online3
 
 def main(args):
     """

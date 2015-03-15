@@ -1,6 +1,6 @@
 #!/usr/bin/env python 
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 from matplotlib.pyplot import *
 from matplotlib.transforms import offset_copy
 import numpy as np
@@ -8,7 +8,24 @@ import scipy
 from scipy.signal import lombscargle
 import scipy.optimize as sco
 import matplotlib.gridspec as gridspec
-import os
+from matplotlib.widgets import CheckButtons
+from matplotlib.ticker import MaxNLocator
+
+global iline, icts
+
+def padxlim2(ax1,xdata):
+    """
+    Set limits on current axis object in a SM-like manner
+    """
+    pad = 0.05
+    xmax = max(xdata)
+    xmin = min(xdata)
+    deltax = xmax - xmin
+    dx = pad * deltax
+    x0 = xmin - dx
+    x1 = xmax + dx
+    print x0, x1
+    ax1.set_xlim(x0,x1)
 
 def fwhm_fit2(aplist,targs):
     nlc = len(targs[:,0])
@@ -27,13 +44,7 @@ def fwhm_fit2(aplist,targs):
         s1 = dapvec2[0]
         w = 3.
         pinitial = np.array([ s0, s1, w ])
-        # Hack to get around non convergence for non-first frame
-        # STH, 2014-07-04
-        try:
-            popt, pcov = sco.curve_fit(psf, aplist_shifted, dapvec2, p0=pinitial)
-            (popt_old, pcov_old) = (popt, pcov)
-        except RuntimeError:
-            (popt, pcov) = (popt_old, pcov_old)
+        popt, pcov = sco.curve_fit(psf, aplist_shifted, dapvec2, p0=pinitial)
         w = popt[2]
         fwhm = 2. * np.sqrt(2.*np.log(2.)) * w
         fwhm_vec.append(fwhm)
@@ -42,7 +53,7 @@ def fwhm_fit2(aplist,targs):
     apfine = np.arange(0,max(aplist),0.1)
     psf_fit = psf((apfine),*popt)
     print 'FWHM = ',fwhm
-    fig=figure(3)
+    fig=figure(3,figsize=(7,4.7))
     ax1 = fig.add_subplot()
     plot(aplist_shifted,dapvec2,'o')
     plot(apfine,psf_fit,'-')
@@ -58,10 +69,13 @@ def fwhm_fit2(aplist,targs):
     ypos = y1 + ys*(y2-y1)
     text(xpos,ypos,totstring, horizontalalignment='center', verticalalignment='center')
 
-    psffile='psf_fit.pdf'
-    savefig(psffile,transparent=True,bbox_inches='tight')
-    close()
-    print 'PSF fit stored in',psffile,'\n'
+    tight_layout()
+    #show()
+
+    #psffile='psf_fit.pdf'
+    #savefig(psffile,transparent=True,bbox_inches='tight')
+    #close()
+    #print 'PSF fit stored in',psffile,'\n'
     return fwhm_vec
 
 def fwhm_fit(aplist,apvec):
@@ -79,7 +93,7 @@ def fwhm_fit(aplist,apvec):
     pinitial = np.array([ s0, s1, w ])
     popt, pcov = sco.curve_fit(psf, aplist_shifted, dapvec2, p0=pinitial)
     w = popt[2]
-    fwhm = 2. * w * np.sqrt(np.log(2.))
+    fwhm = 2. * np.sqrt(2.*np.log(2.)) * w
     apfine = np.arange(0,max(aplist),0.1)
     psf_fit = psf((apfine),*popt)
     print 'FWHM = ',fwhm
@@ -99,10 +113,13 @@ def fwhm_fit(aplist,apvec):
     ypos = y1 + ys*(y2-y1)
     text(xpos,ypos,totstring, horizontalalignment='center', verticalalignment='center')
 
-    psffile='psf_fit.pdf'
-    savefig(psffile,transparent=True,bbox_inches='tight')
-    close()
-    print 'PSF fit stored in',psffile,'\n'
+    show()
+    tight_layout()
+
+    #psffile='psf_fit.pdf'
+    #savefig(psffile,transparent=True,bbox_inches='tight')
+    #close()
+    #print 'PSF fit stored in',psffile,'\n'
 
 # Gaussian functional form assumed for PSF fits
 def psf((rr),s0,s1,w):
@@ -134,11 +151,20 @@ def list_powerset2(lst):
     return reduce(lambda result, x: result + [subset + [x] for subset in result], lst, [[]])
 
 # Make a plot of light curve scatter versus aperture size
-def applot(fap_pdf, aplist,sigvec,apmin,cstring):
-    apfile = fap_pdf
-    fig=figure(1)
+#def applot(aplist,sigvec,apmin,cstring):
+def applot(apfile, aplist,sigvec,apmin,cstring):
+    #apfile = 'aperture.pdf'
+    #fig=figure(2)
+    fig=figure(2,figsize=(7,4.7))
     ax1 = fig.add_subplot()
-    plot(aplist,sigvec,'-o')
+    mask = np.where(aplist > 0.)
+    ap_filt = aplist[mask]
+    sig_filt = sigvec[mask]
+    iarg = np.argsort(ap_filt)
+    ap_filt_s = ap_filt[iarg]
+    sig_filt_s = sig_filt[iarg]
+    #plot(ap_filt,sig_filt,'-o')
+    plot(ap_filt_s,sig_filt_s,'-o')
     xlabel('Aperture size')
     ylabel('Scatter')
     tstring = 'optimal aperture is {0} pixels\n'.format(apmin)
@@ -152,12 +178,17 @@ def applot(fap_pdf, aplist,sigvec,apmin,cstring):
     ypos = y1 + ys*(y2-y1)
     text(xpos,ypos,totstring, horizontalalignment='center', verticalalignment='center')
 
-    savefig(apfile,transparent=True,bbox_inches='tight')
-    close()
-    print 'Aperture optimization stored in',apfile
+    tight_layout()
+    #show()
 
+    #savefig(apfile,transparent=True,bbox_inches='tight')
+    #close()
+    #print 'Aperture optimization stored in',apfile
+    
 # Make a plot of the optimal light curve file
 def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring):
+#def lcplot(time,target,comp,sky,fwhm_vec,cstring):
+    global iline, icts
     ratio = target/comp
     ratio_norm = ratio/np.mean(ratio) - 1.
     #scipy.convolve(y, ones(N)/N)
@@ -172,69 +203,117 @@ def lcplot(flc_pdf, time,target,comp,sky,fwhm_vec,cstring):
     dt = time[1]-time[0]
     fmax = 1./(2.*dt)
     #fmax = 0.01
-    #df = 1./(5.*(time[-1]-time[0]))
-    df = 1./(2.*(time[-1]-time[0]))
+    df = 1./(6.*(time[-1]-time[0]))
+    #df = 1./(2.*(time[-1]-time[0]))
     fmin = df
     fmin = 0.01*df
-    df = (fmax-fmin)/1000.
+    #df = (fmax-fmin)/1000.
     farray = np.arange(fmin,fmax,df)
     omarray = 2.* np.pi * farray
     pow = lombscargle(time,ratio_norm,omarray)
     pow = pow * 4/ndata
     amp = np.sqrt(pow)
 
-    fig=figure(1,figsize=(14, 14),frameon=False)
+    fig=figure(1,figsize=(11, 11))
     gs1 = gridspec.GridSpec(6, 1,hspace=0.0)
     ax1 = fig.add_subplot(gs1[0])
-    ax1.get_xaxis().set_ticklabels([])
-    plot(time,ratio_norm)
+    l1, = ax1.plot(time,ratio_norm,'o')
+    #ax1.set_xlim([-500,15000])
+    ax1.yaxis.set_major_locator( MaxNLocator(nbins = 6) )
     ylabel(r'$\delta I/I$',size='x-large')
-    leg=ax1.legend(['target'],'best',fancybox=True,shadow=False,handlelength=0.0)
-    leg.draw_frame(False)
+    leg1=ax1.legend(['target'],'best',fancybox=True,shadow=False,markerscale=0.0,frameon=False)
+    setp(ax1.get_xticklabels(), visible=False)
+    #padxlim2(ax1,time)
 
     ax2 = fig.add_subplot(gs1[1],sharex=ax1)
-    plot(time_smooth[0:-nfilt],ratio_norm_smooth[:-nfilt])
+    l2, = plot(time_smooth[0:-nfilt],ratio_norm_smooth[:-nfilt],'o')
+    ax2.yaxis.set_major_locator( MaxNLocator(nbins = 6, prune = 'upper') )
     ylabel(r'$\delta I/I$',size='x-large')
-    leg=ax2.legend(['target smoothed'],'best',fancybox=True,shadow=False,handlelength=0.0)
-    leg.draw_frame(False)
+    leg=ax2.legend(['target smoothed'],'best',fancybox=True,shadow=False,markerscale=0.0,frameon=False)
+    setp(ax2.get_xticklabels(), visible=False)
 
     ax3 = fig.add_subplot(gs1[2],sharex=ax1)
-    plot(time,comp_norm)
+    l3, = plot(time,comp_norm,'o')
+    ax3.yaxis.set_major_locator( MaxNLocator(nbins = 6, prune = 'upper') )
     ylabel(r'$\delta I/I$',size='x-large')
     comstring = 'comparison\n' + '= ' + cstring
-    leg=ax3.legend([comstring],'best',fancybox=True,shadow=False,handlelength=0.0)
-    leg.draw_frame(False)
+    leg=ax3.legend([comstring],'best',fancybox=True,shadow=False,markerscale=0.0,frameon=False)
+    setp(ax3.get_xticklabels(), visible=False)
 
-    ax4 = fig.add_subplot(gs1[3])
-    pl1=ax4.plot(time,sky_norm,label = 'Sky')
+    ax4 = fig.add_subplot(gs1[3],sharex=ax1)
+    pl1 =ax4.plot(time,sky_norm,'o',label = 'Sky')
+    l4, = pl1
+    ax4.yaxis.set_major_locator( MaxNLocator(nbins = 5, prune = 'upper') )
     ylabel('Sky',size='large')
-    xlabel(r'${\rm time \, (sec)}$',size='x-large')
+    xlabel('time (sec)',size='large')
     fwhm_string = 'FWHM={0:.3f}'.format(fwhm_vec[-1])
     ax6 = ax4.twinx()
-    pl2 = ax6.plot(time, fwhm_vec, 'r-',label = fwhm_string)
+    pl2 = ax6.plot(time, fwhm_vec, 'ro',label = fwhm_string)
+    l5, = pl2
     pls = pl1 + pl2
     ax6.set_ylabel('FWHM', color='r')
     for tl in ax6.get_yticklabels():
         tl.set_color('r')
 
     labs = [l.get_label() for l in pls]
-    leg=ax4.legend(pls, labs, 'best', loc=0)
-    leg.draw_frame(False)
+    leg=ax4.legend(pls, labs, 'best', frameon = False, ncol=2, handletextpad=0.0, columnspacing=0.0)
 
     gs2 = gridspec.GridSpec(4, 1,hspace=0.1)
     ax5 = fig.add_subplot(gs2[3])
 
     freqs = farray * 1.e+6
     plot(freqs,amp)
+    xmax=max(freqs)
+    xlim(0.,xmax)
     xlabel(r'Frequency ($\mu$Hz)',size='large')
     ylabel('Amplitude',size='large')
     leg=ax5.legend(['FT'],'best',fancybox=True,shadow=False,handlelength=0.0)
     leg.draw_frame(False)
 
-    filebase = 'lc.pdf'
-    savefig(filebase,transparent=True,bbox_inches='tight')
-    close()
-    print 'Optimal light curve plot stored in',filebase,'\n'
+    rax = axes([0.46, 0.905, 0.11, 0.07])
+    lin = ' lines'
+    cts = ' counts'
+    check = CheckButtons(rax, (lin,' counts'), (False, False))
+    iline = 1
+    icts = 1
+    lset = [l1, l2, l3, l4, l5]
+    def stylefunc(label):
+        global iline, icts
+        if label == lin: 
+            if iline == 1:
+                for ll in lset:
+                    ll.set_linestyle('-')
+                    ll.set_marker('None')
+            else:
+                for ll in lset:
+                    ll.set_linestyle('o')
+                    ll.set_marker('o')
+            iline = -1 * iline
+        if label == cts: 
+            if icts == 1:
+                l3.set_ydata(comp)
+                ax3.set_ylabel('Comp',size='large')
+                l4.set_ydata(sky)
+            else:
+                l3.set_ydata(comp_norm)
+                ax3.set_ylabel(r'$\delta I/I$',size='x-large')
+                l4.set_ydata(sky_norm)
+            ax3.relim()
+            ax3.autoscale_view()
+            ax4.relim()
+            ax4.autoscale_view()
+            icts = -1 * icts
+        draw()
+
+    check.on_clicked(stylefunc)
+
+    #tight_layout()
+    show()
+
+    #filebase = 'lc.pdf'
+    #savefig(filebase,transparent=True,bbox_inches='tight')
+    #close()
+    #print 'Optimal light curve plot stored in',filebase,'\n'
 
 # ysig is normalized so that it represents the point-to-point 
 # scatter sigma_i, assuming uncorrelated, random noise
@@ -246,10 +325,13 @@ def scatter(lcvec):
     ysig  = np.sqrt(np.dot(dy,dy)/(2.*(ndata-1.)))
     return ysig
 
+#if __name__ == '__main__':
 def main(args):
-    """
-    Read lightcurve file and create plots.
-    """
+
+    #lcfile = 'lightcurve.app'
+    #lcfile = 'lightcurve_test.app'
+    lcfile = 'tmp2.app'
+
     # Get number of stars
     f = open(args.flc,'r')
     line = f.readline()
@@ -259,7 +341,6 @@ def main(args):
 
     print '\nThe Number of stars is',nstars
 
-    cols=range(0,3*nstars+1)
     cols=range(0,3*nstars+1)
     var = np.loadtxt(args.flc,usecols=cols)
 
@@ -331,6 +412,7 @@ def main(args):
                 compstar = compstar + stars[:,ii]
             
             # divide by comparison, normalize, and shift to zero
+            compstar[compstar < 10.] = 10.
             ratio = ta/compstar
             ratio = ratio/np.mean(ratio) - 1.0
             ysig = scatter(ratio)
@@ -374,7 +456,7 @@ def main(args):
     comp_ysig = scatter(ncompstar)
     print 'Scatter: target=',sigmin,' Comparison=',comp_ysig
 
-    # Do FWHM fits for target star at all points of light curve
+    # Do FWHM fits for star at all points of light curve.
     # Choose comparison or target star based on lower level of scatter.
     if comp_ysig <= sigmin:
         fwhm_vec = fwhm_fit2(aplist,comps[:,:,ncmin])   # FWHM of composite comparison star
