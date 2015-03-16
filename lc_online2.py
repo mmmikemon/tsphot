@@ -44,6 +44,7 @@ def fwhm_fit2(aplist,targs,is_first_iter):
         s1 = dapvec2[0]
         w = 3.
         pinitial = np.array([ s0, s1, w ])
+        print('fwhm: ',is_first_iter,j)
         popt, pcov = sco.curve_fit(psf, aplist_shifted, dapvec2, p0=pinitial)
         w = popt[2]
         fwhm = 2. * np.sqrt(2.*np.log(2.)) * w
