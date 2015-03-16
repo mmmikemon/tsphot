@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 from pylab import *
 import numpy as np
 #from matplotlib.widgets import Slider, Button, RadioButtons
