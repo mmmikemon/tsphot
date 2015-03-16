@@ -115,8 +115,10 @@ def fwhm_fit(aplist,apvec,is_first_iter):
 
     if is_first_iter:
         show(block=False)
+        pause(1.0)
     else:
         draw()
+        pause(1.0)
     tight_layout()
 
     #psffile='psf_fit.pdf'
