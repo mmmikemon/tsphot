@@ -61,7 +61,9 @@ import astropy
 import ccdproc
 import imageutils
 import photutils
-from photutils.detection import morphology, lacosmic
+#from photutils.detection import morphology, lacosmic
+from photutils import morphology
+from  ccdproc.core import cosmicray_lacosmic as lacosmic
 # noinspection PyPep8Naming
 import astroML.stats as astroML_stats
 # Internal package imports.
@@ -72,7 +74,8 @@ import read_spe
 # TODO: resolve #noinspection PyUnresolvedReferences
 
 
-def create_reduce_config(fjson='reduce_config.json'):
+def create_reduce_config(rootdir='.',obj='test.spe',fjson='reduce_config.json', bias='calib_bias.spe', dark='calib_dark.spe', flat='calib_flat.spe', master_bias='master_bias.pkl', master_dark='master_dark.pkl', master_flat='master_flat.pkl'):
+
     """Create JSON configuration file for data reduction.
 
     Parameters
@@ -102,24 +105,52 @@ def create_reduce_config(fjson='reduce_config.json'):
                                    "For ['logging']['level'], choices are (from most to least verbose):",
                                    "  ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']",
                                    "  See https://docs.python.org/2/library/logging.html#logging-levels"]
+
+    bfull = os.path.join(rootdir,bias)
+    bdir = os.path.dirname(os.path.realpath(bfull))
+    dfull = os.path.join(rootdir,dark)
+    ddir = os.path.dirname(os.path.realpath(dfull))
+    ffull = os.path.join(rootdir,flat)
+    fdir = os.path.dirname(os.path.realpath(ffull))
+
+    ofull = os.path.join(rootdir,obj)
+    odir = os.path.dirname(os.path.realpath(ofull))
+    ored = os.path.join(rootdir,odir,'object_reduced.pkl')
+
+    mbfull = os.path.join(rootdir,bdir,master_bias)
+    mbdir = os.path.dirname(os.path.realpath(mbfull))
+    mdfull = os.path.join(rootdir,ddir,master_dark)
+    mddir = os.path.dirname(os.path.realpath(mdfull))
+    mffull = os.path.join(rootdir,fdir,master_flat)
+    mfdir = os.path.dirname(os.path.realpath(mffull))
+
+    fjfull = os.path.join(rootdir,odir,fjson)
+
+    logfull = os.path.join(rootdir,odir,'tsphot.log')
+
     config_settings['logging'] = collections.OrderedDict()
-    config_settings['logging']['filename'] = "tsphot.log"
+
+    config_settings['logging'] = collections.OrderedDict()
+    config_settings['logging']['filename'] = logfull
     config_settings['logging']['level'] = "INFO"
     config_settings['calib'] = collections.OrderedDict()
-    config_settings['calib']['bias'] = "calib_bias.spe"
-    config_settings['calib']['dark'] = "calib_dark.spe"
-    config_settings['calib']['flat'] = "calib_flat.spe"
+    config_settings['calib']['bias'] = bfull
+    config_settings['calib']['dark'] = dfull
+    config_settings['calib']['flat'] = ffull
     config_settings['master'] = collections.OrderedDict()
-    config_settings['master']['bias'] = "master_bias.pkl"
-    config_settings['master']['dark'] = None
-    config_settings['master']['flat'] = "master_flat.pkl"
+    config_settings['master']['bias'] = mbfull
+    config_settings['master']['dark'] = mdfull
+    config_settings['master']['flat'] = mffull
     config_settings['object'] = collections.OrderedDict()
-    config_settings['object']['raw'] = "object_raw.spe"
-    config_settings['object']['reduced'] = "object_reduced.pkl"
+    config_settings['object']['raw'] = ofull
+    config_settings['object']['reduced'] = ored
     # Use binary read-write for cross-platform compatibility. Use Python-style indents in the JSON file.
-    with open(fjson, 'wb') as fobj:
+    #with open(fjson, 'wb') as fobj:
+    with open(fjfull, 'wb') as fobj:
         json.dump(config_settings, fobj, sort_keys=False, indent=4)
-    return None
+    #return None
+    com_string = 'python main.py --fconfig {0} -v'.format(fjfull)
+    return com_string
 
 
 def check_reduce_config(dobj):
@@ -610,6 +641,9 @@ def get_exptime_prog(spe_footer_xml):
 
     """
     footer_xml = BeautifulSoup(spe_footer_xml, 'xml')
+    print('hello')
+    print(footer_xml.find(name='ExposureTime'))
+    print('hello')
     exptime_prog = float(footer_xml.find(name='ExposureTime').contents[0])
     exptime_prog_res = float(footer_xml.find(name='DelayResolution').contents[0])
     exptime_prog_sec = (exptime_prog / exptime_prog_res)
@@ -801,7 +835,8 @@ def remove_cosmic_rays(image, contrast=2.0, cr_threshold=4.5, neighbor_threshold
     tmp_kwargs = dict(contrast=contrast, cr_threshold=cr_threshold, neighbor_threshold=neighbor_threshold,
                       gain=gain, readnoise=readnoise, **kwargs)
     logger.debug("LA-Cosmic keyword arguments: {tmp_kwargs}".format(tmp_kwargs=tmp_kwargs))
-    (image_cleaned, ray_mask) = lacosmic.lacosmic(image, contrast=contrast, cr_threshold=cr_threshold,
+    #(image_cleaned, ray_mask) = lacosmic.lacosmic(image, contrast=contrast, cr_threshold=cr_threshold,
+    (image_cleaned, ray_mask) = lacosmic(image, contrast=contrast, cr_threshold=cr_threshold,
                                                   neighbor_threshold=neighbor_threshold, gain=gain, readnoise=readnoise,
                                                   **kwargs)
     return image_cleaned, ray_mask
